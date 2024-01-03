@@ -64,7 +64,7 @@ func main() {
 	c := &http.Client{
 		Transport: &oauth2.Transport{
 			// Source: oauth2.StaticTokenSource(token),
-			Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token, TokenType: "Bearer"}),
+			Source: oauth2.StaticTokenSource(token),
 		},
 	}
 	gqlClient := graphql.NewClient(gqlEP, c)
