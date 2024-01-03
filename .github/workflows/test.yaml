@@ -1,0 +1,26 @@
+name: Build and Test
+
+on:
+  workflow_dispatch:
+#   pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: clone guac-data
+        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+        with:
+          repository: 'guacsec/guac-data'
+          ref: 'main'
+          path: 'guac-data'
+
+      - name: ingest to guac
+        uses: ./
+        with:
+          gql-addr: https://auth-demo.api.us.kusari.cloud/query
+          files: ./guac-data/docs
