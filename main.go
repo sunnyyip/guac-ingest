@@ -63,7 +63,8 @@ func main() {
 
 	c := &http.Client{
 		Transport: &oauth2.Transport{
-			Source: oauth2.StaticTokenSource(token),
+			// Source: oauth2.StaticTokenSource(token),
+			Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token, TokenType: "Bearer"}),
 		},
 	}
 	gqlClient := graphql.NewClient(gqlEP, c)
@@ -73,12 +74,20 @@ func main() {
 	}
 }
 
+// func authToken(ctx context.Context, tokenURL, clientID string, clientSecret string, gqlEP string) (string, error) {
 func authToken(ctx context.Context, tokenURL, clientID string, clientSecret string, gqlEP string) (*oauth2.Token, error) {
 	logger := logging.FromContext(ctx)
 	if !providers.Enabled(ctx) {
 		return nil, fmt.Errorf("incorrect environment")
 	}
-	token, err := providers.Provide(ctx, tokenURL)
+
+	gqlUrl, err := url.Parse(gqlEP)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse audience from gql-addr")
+	}
+	token_aud := fmt.Sprintf("%v://%v", gqlUrl.Scheme, gqlUrl.Hostname())
+
+	token, err := providers.Provide(ctx, token_aud)
 	if err != nil {
 		return nil, err
 	}
@@ -87,32 +96,29 @@ func authToken(ctx context.Context, tokenURL, clientID string, clientSecret stri
 	}
 	logger.Infof("ID token aquired")
 
-	gqlUrl, err := url.Parse(gqlEP)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse audience from gql-addr")
-	}
-	audience := fmt.Sprintf("%v://%v", gqlUrl.Scheme, gqlUrl.Hostname())
+	return &oauth2.Token{AccessToken: token, TokenType: "Bearer"}, nil
+	// return token, nil
 
-	var conf oauth2.Config
-	conf.Endpoint.TokenURL = tokenURL
-	conf.Endpoint.AuthStyle = oauth2.AuthStyleInParams
-	options := []oauth2.AuthCodeOption{
-		oauth2.SetAuthURLParam("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"),
-		oauth2.SetAuthURLParam("scope", "openid"),
-		oauth2.SetAuthURLParam("client_id", clientID),
-		oauth2.SetAuthURLParam("client_secret", clientSecret),
-		oauth2.SetAuthURLParam("audience", audience),
-		oauth2.SetAuthURLParam("assertion", token),
-	}
-	tok, err := conf.Exchange(ctx, "", options...)
-	if err != nil {
-		return nil, err
-	}
-	if tok.AccessToken == "" {
-		return nil, fmt.Errorf("empty token")
-	}
-	logger.Infof("Access token aquired")
-	return tok, nil
+	// var conf oauth2.Config
+	// conf.Endpoint.TokenURL = tokenURL
+	// conf.Endpoint.AuthStyle = oauth2.AuthStyleInParams
+	// options := []oauth2.AuthCodeOption{
+	// 	oauth2.SetAuthURLParam("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"),
+	// 	oauth2.SetAuthURLParam("scope", "openid"),
+	// 	oauth2.SetAuthURLParam("client_id", clientID),
+	// 	oauth2.SetAuthURLParam("client_secret", clientSecret),
+	// 	oauth2.SetAuthURLParam("audience", audience),
+	// 	oauth2.SetAuthURLParam("assertion", token),
+	// }
+	// tok, err := conf.Exchange(ctx, "", options...)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if tok.AccessToken == "" {
+	// 	return nil, fmt.Errorf("empty token")
+	// }
+	// logger.Infof("Access token aquired")
+	// return tok, nil
 }
 
 func collectFiles(ctx context.Context, files string, gqlClient graphql.Client) error {
