@@ -28,5 +28,5 @@ jobs:
       - name: ingest to guac
         uses: ./
         with:
-          gql-addr: https://auth-demo.api.us.kusari.cloud/query
+          gql-addr: https://guac-demo.api.dev.kusari.cloud/query
           files: ./guac-data/docs
